@@ -17,8 +17,13 @@
             updateScreen(JSON.parse(msg));
         });
 
+        socket.on('notice_turnout', (msg) => {
+            updateturnout(msg);
+        });
+
         // connect init
         socket.connect();
+        socket.emit('set_members');
         socket.emit('admin_call_info');
     }
 
@@ -53,12 +58,22 @@
         }
         socket.emit('admin_change_phase', num);
     }
+
+    function charge(){
+        var Ether = document.getElementById("charge").value
+        socket.emit("charge",Ether)
+    }
+
+    function updateturnout(num){
+        document.getElementById("turnout").innerHTML = num;
+    }
 </script>
 <main>
     <div class="div1">
         <font size="+2">[ADMIN] VOTE SYSTEM</font> (ContractAddress: <span id="caddr"></span>)<br>
         System Reserved Funds: <font size="+2"><span id="cbalance"></span> Ether</font>
         now phase: <font size="+3"><span id="phase"></span> </font>
+        turnout:<font size="+2"><span id="turnout"></span>% </font>
     </div>
     <hr>
     <div class="div2"><br>
@@ -68,6 +83,11 @@
         　<input type="radio" name="phase" value="2" disabled="disabled">　phase2 投票中<br><br>
         　<input type="radio" name="phase" value="3" disabled="disabled">　phase3 投票締め切り・結果発表<br><br>
         <input type="button" value="CHANGE PHASE" onclick="changePhase();"/><br><br>
+    </div>
+    <div class="div3"><br>
+        charge<br><br>
+        <input type="text" id="charge"/>Ether<br>
+        <input type="button" value="charge Ether" onclick="charge();"/><br><br>
     </div>
 </main>
 </body>

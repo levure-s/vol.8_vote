@@ -35,6 +35,7 @@ class votejs {
         this.DEPOSIT_ETHER = 900;
         this.OUT_OF_ETHER = 98;
         this.registIndex = 1;
+        this.Members = [];
 
         // adjust balance for TEST 
         var balance1 = await web3.eth.getBalance(this.accounts[1]);
@@ -47,6 +48,7 @@ class votejs {
             var eth = web3.utils.toWei(this.OUT_OF_ETHER.toString(), 'ether');
             await web3.eth.sendTransaction({from:this.accounts[i], to:this.OWNER_ADDR, value:eth})
                 .catch(() => { senderrflg = true; });
+            this.Members[i] = this.accounts[i]
         }
         if(senderrflg) {
             console.log("startVoteSystem: send ERR. please restart 'Ganache' and reTry.");
@@ -115,6 +117,13 @@ class votejs {
         io.of('/admin').on('connection', (socket) => {
             console.log("admin connected " + socket.id);
 
+            socket.on('set_members',() =>{
+                for(var i = 0; i < this.accounts.length; i++){
+                    this.obj.methods.registMember(this.Members[i]).send({from:this.OWNER_ADDR, gas:'5000000'})
+                }
+                console.log("set members");
+            });
+
             // on admincall_change_phase
             socket.on('admin_change_phase', (msg) => {
                 this.execChangePhase(socket, msg);
@@ -129,6 +138,11 @@ class votejs {
             socket.on('admin_call_info', () => {
                 this.execGetContractInfo(socket);
             });
+
+            socket.on('charge', (msg) => {
+                this.charge(socket, msg);
+            });
+
         });
     }
 
@@ -201,6 +215,7 @@ class votejs {
     async execGetVoteList(sock) {
         var j = [];
         var cnt = await this.obj.methods.getCandidatesCount().call();
+        var some = 0
         for(var i = 0; i < cnt; i++) {
             var obj = await this.obj.methods.candidates(i).call();
             var balance = await web3.eth.getBalance(obj.addr);
@@ -212,8 +227,11 @@ class votejs {
                 count: obj.voteCount,
                 balance: balanceEther
             };
-        }
+            some += parseInt(j[i].count,10)
+        } 
+        var turnout = some * 100  / cnt
         io.sockets.emit('notice_votelist', JSON.stringify(j));
+        io.of('/admin').emit('notice_turnout', parseInt(turnout,10));
     }
 
     // exec change phase
@@ -239,6 +257,13 @@ class votejs {
                 console.log("execCountVote: unknown err");
             });
         console.log("execCountVote: OK");
+    }
+
+    async charge(sock,num){
+        var eth = web3.utils.toWei(num.toString(), 'ether');
+        await this.obj.methods.charge().send({value:eth, gas:'5000000'});
+        console.log("charge" + num.toString() + "Ether");
+        this.execGetContractInfo(sock)
     }
 
 }

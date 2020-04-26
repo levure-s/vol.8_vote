@@ -1,4 +1,4 @@
-pragma solidity ^0.6.3;
+pragma solidity >=0.4.22 <0.6.0;
 
 contract Vote {
     struct Candidate {
@@ -15,6 +15,7 @@ contract Vote {
     mapping(address=>bool) registerd;
     mapping(address=>bool) voted;
     mapping(address=>bytes32) passhash;
+    mapping(address=>bool) members;
 
     constructor() payable public {
         owner = msg.sender;
@@ -22,12 +23,20 @@ contract Vote {
 
     function changePhase(Phase _p) public {
         require(owner == msg.sender, "owner err.");
+        require(phase < _p,"phase err.");
         phase = _p;
+    }
+
+     function registMember(address _addr) public{
+        require(phase == Phase.Init, "phase err.");
+        require(owner == msg.sender, "owner err.");
+        members[_addr] = true;
     }
 
     function registCandidate(string memory _name, string memory _manifesto, bytes32 _passhex) public {
         require(phase == Phase.Regist, "phase err.");
         require(registerd[msg.sender] == false, "already regist err.");
+        require(members[msg.sender] == true, "members err.");
         candidates.push(Candidate({name: _name, addr: msg.sender, manifesto: _manifesto, voteCount: 0}));
         passhash[msg.sender] = keccak256(abi.encode(_passhex));
         registerd[msg.sender] = true;
@@ -74,5 +83,7 @@ contract Vote {
         require(elected.addr == msg.sender, "withdraw only elected err.");
         msg.sender.transfer(address(this).balance);
     }
+
+    function charge() payable public{}
 }
 
